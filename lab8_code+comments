@@ -1,0 +1,305 @@
+#include <iostream>
+#include <stdexcept>
+
+class Heap {
+public:
+    int* data; // указатель на динамический массив для хранения элементов кучи
+    int size;  // макс кол-во элементов
+    int count; // текущее кол-во элементов
+
+    // конструктор определяет размер кучи + выделяет память под массив
+    Heap(int s) : size(s), count(0) {
+        data = new int[s]; // выделение памяти для массива size s с помощью new
+        if (!data) { // проверка на успешное выделение памяти
+            throw std::runtime_error("Memory allocation failed");
+        }
+    }
+
+    // определение приоритета элемента: нечётные числа имеют более высокий 
+    // приоритет, чем чётные
+    bool PriorityIsHigh(int child, int parent) const {
+        if (data[child] % 2 != 0 && data[parent] % 2 == 0) {
+            return true; // нечётное число выше чётного
+        }
+        if (data[child] % 2 != 0 && data[parent] % 2 != 0) {
+            return data[child] > data[parent];
+        }
+        return false;
+    }
+
+    // ПРОВЕРКА РАЗМЕРА
+    void checkSize(const Heap& other) const {
+        if (size != other.size) {
+            throw std::invalid_argument("Size mismatch");
+        }
+    }
+
+    // INSERTION
+    void insert(int value) {
+        if (count >= size) { // проверка на переполнение кучи
+            throw std::overflow_error("Heap is full"); // чтобы не выходить за память
+        }
+        data[count++] = value;
+
+        // но добавление по свойствам кучи
+        for (int index = count - 1; index > 0;) {
+            int parentIndex = (index - 1) / 2; 
+            if (PriorityIsHigh(index, parentIndex)) {
+                std::swap(data[index], data[parentIndex]);
+                index = parentIndex;
+            } else {
+                break;
+            }
+        }
+    }
+
+    // метод для получения и удаления элемента с наивысшим приоритетом
+    int extractMax() {
+        if (count == 0) throw std::underflow_error("Heap is empty");
+        // чтобы не пытаться удалить из пустой кучи
+        
+        int maxValue = data[0]; // корень
+        data[0] = data[--count];
+
+        // придаём свойства кучи
+        for (int index = 0; index * 2 + 1 < count;) {
+            int childIndex = index * 2 + 1; // левый узел
+
+            // выбор правого узла, если он существует и имеет более высокий приоритет
+            if (childIndex + 1 < count && PriorityIsHigh(childIndex + 1, childIndex)) {
+                childIndex++; // переход к правому узлу
+            }
+
+            if (PriorityIsHigh(childIndex, index)) { // проверка приоритета между
+            // текущим и нижним узлами
+                std::swap(data[index], data[childIndex]);
+                index = childIndex; // переход к нижнему узлу
+            } else {
+                break;
+            }
+        }
+
+        return maxValue;
+    }
+
+    // вывод "кучи"
+    void print() const {
+        for (int i = 0; i < count; ++i) {
+            std::cout << data[i] << " ";
+    }
+    }
+
+    // УПР. ПАМЯТЬЮ (после обработки)
+    void releaseMemory() {
+        delete[] data;   // освобождение памяти
+        data = nullptr;  // обнуление указателя
+    }
+
+
+    // возвращает указатель на массив данных, который хранит элементы кучи
+    int* getData() const { 
+        return data;  
+    }
+
+    // СЛОЖЕНИЕ
+    Heap operator+(const Heap& other) const {
+        checkSize(other); // проверка на совпадение размерности
+
+        Heap result(size); // future результат (далее то же самое для ост. методов)
+
+        for (int i = 0; i < count; ++i) {
+            result.insert(data[i] + other.data[i]);
+        }
+
+        return result;
+    }
+
+    // ВЫЧИТАНИЕ
+    Heap operator-(const Heap& other) const {
+        checkSize(other); 
+
+        Heap result(size);
+
+        for (int i = 0; i < count; ++i) {
+            result.insert(data[i] - other.data[i]); 
+        }
+
+        return result;
+    }
+
+    // УМНОЖЕНИЕ
+    Heap operator*(const Heap& other) const {
+        checkSize(other); 
+
+        Heap result(size);
+
+        for (int i = 0; i < count; ++i) {
+            result.insert(data[i] * other.data[i]); 
+        }
+
+        return result;
+    }
+
+    // ДЕЛЕНИЕ
+    Heap operator/(const Heap& other) const {
+        checkSize(other); 
+
+        Heap result(size);
+
+        for (int i = 0; i < count; ++i) {
+            if (other.data[i] == 0) throw std::domain_error("Division by zero"); 
+            result.insert(data[i] / other.data[i]); 
+        }
+
+        return result;
+    }
+//--------------------------------------------------------------------------------
+  	// ОПЕРАЦИИ СО СКАЛЯРАМИ, сохраняем св-ва используя уже написанный insert
+  	// СЛОЖЕНИЕ
+  	Heap operator+(int scalar) const {
+      	Heap result(size); 
+
+      	for (int i = 0; i < count; ++i) {
+          	result.insert(data[i] + scalar); 
+      	}
+
+      	return result;
+  	}
+
+  	// ВЫЧИТАНИЕ
+  	Heap operator-(int scalar) const {
+      	Heap result(size); 
+
+      	for (int i = 0; i < count; ++i) {
+          	result.insert(data[i] - scalar); 
+      	}
+
+      	return result;
+  	}
+
+  	// УМНОЖЕНИЕ
+  	Heap operator*(int scalar) const {
+      	Heap result(size); 
+
+      	for (int i = 0; i < count; ++i) {
+          	result.insert(data[i] * scalar); 
+      	}
+
+      	return result;
+  	}
+
+  	// ДЕЛЕНИЕ
+  	Heap operator/(int scalar) const {
+      	if (scalar == 0) throw std::domain_error("Division by zero"); 
+
+      	Heap result(size); 
+
+      	for (int i = 0; i < count; ++i) {
+          	result.insert(data[i] / scalar); 
+      	}
+
+      	return result;
+  	}
+};
+
+//--------------------------------------------------------------------------
+
+int main() {
+    try {
+        Heap heap1(10);
+      	// добавление элементов в первую кучу:
+      	heap1.insert(10);
+      	heap1.insert(20);
+      	heap1.insert(15);
+      	heap1.insert(25);
+      	heap1.insert(30);
+      	heap1.insert(5);
+
+      	Heap heap2(10);
+      	// добавление элементов во вторую кучу:
+      	heap2.insert(5);
+      	heap2.insert(15);
+      	heap2.insert(10);
+      	heap2.insert(20);
+      	heap2.insert(25);
+      	heap2.insert(35);
+      	
+      	
+      	std::cout << "Heap1: ";
+      	heap1.print();
+      	std::cout << std::endl;
+      	
+      	
+      	std::cout << "Heap2: ";
+      	heap2.print();
+      	std::cout << std::endl;
+      	
+
+      	// сложение двух куч:
+        std::cout << "Heap1 + Heap2: ";
+      	Heap sumHeap = heap1 + heap2;
+      	sumHeap.print();
+      	std::cout << std::endl;
+
+      	// вычитание одной кучи из другой:
+      	std::cout << "Heap1 - Heap2: ";
+      	Heap diffHeap = heap1 - heap2;
+      	diffHeap.print();
+      	std::cout << std::endl;
+
+      	// умножение двух куч:
+      	std::cout << "Heap1 * Heap2: ";
+      	Heap productHeap = heap1 * heap2;
+      	productHeap.print();
+      	std::cout << std::endl;
+
+      	// деление одной кучи на другую:
+      	std::cout << "Heap1 / Heap2: ";
+        Heap quotientHeap = heap1 / heap2;
+        quotientHeap.print();   
+        std::cout << std::endl;
+
+        int scalar = 3;
+        
+        // сложение со скаляром
+        std::cout << "Heap1 + Scalar: ";
+        Heap sumWithScalar = heap1 + scalar;
+        sumWithScalar.print();
+        std::cout << std::endl;
+        
+        // вычитание скаляра
+        std::cout << "Heap1 - Scalar: ";
+        Heap diffWithScalar = heap1 - scalar;
+        diffWithScalar.print();
+        std::cout << std::endl;
+        
+        // умножение кучи (всех элементов) на скаляр
+        std::cout << "Heap1 * Scalar: ";
+        Heap productWithScalar = heap1 * scalar;
+        productWithScalar.print();
+        std::cout << std::endl;
+        
+        // деление на скаляр 
+        std::cout << "Heap1 / Scalar: ";
+        Heap quotientWithScalar = heap1 / scalar;
+        quotientWithScalar.print();
+        std::cout << std::endl;
+        
+        // освобождение памяти перед завершением программы вручную:
+        heap1.releaseMemory();  	
+        heap2.releaseMemory();  	
+        sumHeap.releaseMemory();  	
+        diffHeap.releaseMemory();  	
+        productHeap.releaseMemory();  
+        quotientHeap.releaseMemory();  
+        sumWithScalar.releaseMemory();
+        diffWithScalar.releaseMemory();
+        productWithScalar.releaseMemory();
+        quotientWithScalar.releaseMemory();
+
+   } catch (const std::exception& e) { 
+       std::cerr << "Error: " << e.what() << std::endl; 
+   }
+
+   return 0;
+};
